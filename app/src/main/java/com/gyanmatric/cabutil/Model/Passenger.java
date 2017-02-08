@@ -8,27 +8,6 @@ import com.google.gson.annotations.SerializedName;
 
 public class Passenger {
 
-    public enum status{
-        WAITING ("waiting"),
-        PICKED ("picked"),
-        dropped ("dropped"),
-        cancelled ("cancelled");
-
-        private final String status;
-
-        private status(String s){
-            status = s;
-        }
-
-        public boolean equals(String s){
-            return status.equals(s);
-        }
-
-        public String toString(){
-            return status;
-        }
-    }
-
     @SerializedName("empCode")
     int empCode;
 
@@ -42,7 +21,7 @@ public class Passenger {
     String to;
 
     @SerializedName("status")
-    status empStatus;
+    String empStatus;
 
     public int getEmpCode() {
         return empCode;
@@ -76,11 +55,11 @@ public class Passenger {
         this.to = to;
     }
 
-    public status getEmpStatus() {
+    public String getEmpStatus() {
         return empStatus;
     }
 
-    public void setEmpStatus(status empStatus) {
+    public void setEmpStatus(String empStatus) {
         this.empStatus = empStatus;
     }
 }

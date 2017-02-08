@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -24,6 +25,7 @@ import com.gyanmatric.cabutil.Interfaces.RvOnItemClickListner;
 import com.gyanmatric.cabutil.Model.Driver;
 import com.gyanmatric.cabutil.Model.DriverListResponse;
 import com.gyanmatric.cabutil.Network.APIClient;
+import com.gyanmatric.cabutil.Network.APIFetcher;
 import com.gyanmatric.cabutil.Network.APIInterface;
 import com.gyanmatric.cabutil.R;
 
@@ -35,7 +37,11 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class HomeActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener, RvOnItemClickListner {
+        implements NavigationView.OnNavigationItemSelectedListener, RvOnItemClickListner, SwipeRefreshLayout.OnRefreshListener, APIFetcher.APIDriverFetcherCallback {
+
+    SwipeRefreshLayout swipeRefreshLayout;
+    LinearLayout spinnerLayout;
+    RecyclerView recyclerView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,39 +72,21 @@ public class HomeActivity extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
-    }
 
-    private void initDriverList() {
+        spinnerLayout = (LinearLayout) findViewById(R.id.ll_spinner_activity_home);
 
-        final LinearLayout spinnerLayout = (LinearLayout) findViewById(R.id.ll_spinner_activity_home);
-        spinnerLayout.setVisibility(View.VISIBLE);
-        List<Driver> driverList = new ArrayList<>();
-
-        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.rv_content_home);
+        recyclerView = (RecyclerView) findViewById(R.id.rv_content_home);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
-        final RvDriverListAdaptor adaptor = new RvDriverListAdaptor(driverList, this);
-        recyclerView.setAdapter(adaptor);
 
+        swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.sl_content_home);
+        swipeRefreshLayout.setOnRefreshListener(this);
+    }
 
-        APIInterface apiService = APIClient.getAPIClient().create(APIInterface.class);
-        Call<DriverListResponse> call = apiService.getListOfDriver();
-        call.enqueue(new Callback<DriverListResponse>() {
-            @Override
-            public void onResponse(Call<DriverListResponse> call, Response<DriverListResponse> response) {
-               List<Driver> driverList = response.body().getDriverList();
-                adaptor.setDriverList(driverList);
-                adaptor.notifyDataSetChanged();
-                spinnerLayout.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onFailure(Call<DriverListResponse> call, Throwable t) {
-                Log.e("HOME_ACTIVITY","Fetching Error");
-            }
-        });
-
+    private void initDriverList() {
+        spinnerLayout.setVisibility(View.VISIBLE);
+        APIFetcher.getDriversFromServer(this);
     }
 
     @Override
@@ -127,6 +115,10 @@ public class HomeActivity extends AppCompatActivity
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            return true;
+        }
+        if (id == R.id.bt_refresh_home) {
+            initDriverList();
             return true;
         }
 
@@ -163,5 +155,22 @@ public class HomeActivity extends AppCompatActivity
         Intent intent = new Intent(this, DetailDriverActivity.class);
         intent.putExtra("driverId", driver.getId());
         startActivity(intent);
+    }
+
+    @Override
+    public void onRefresh() {
+
+        APIFetcher.getDriversFromServer(this);
+        swipeRefreshLayout.setRefreshing(false);
+    }
+
+    @Override
+    public void onDriverDataFetched(List<Driver> driverList) {
+
+        final RvDriverListAdaptor adaptor = new RvDriverListAdaptor(driverList, this);
+        recyclerView.setAdapter(adaptor);
+        adaptor.setDriverList(driverList);
+        adaptor.notifyDataSetChanged();
+        spinnerLayout.setVisibility(View.GONE);
     }
 }
